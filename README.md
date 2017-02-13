@@ -14,8 +14,11 @@ There are two different styles of function-return supported here: `DangerMode` a
 
 The latter returns the raw response from issuing the request and the former calls `raise_for_status` and then attempts to return `resp.json()`. You can switch which style you'd like to use by creating a proper `CommonGeneratorOptions` object.
 
-The default options just chucks it all to the wind and goes for `DangerMode` (because, seriously, we're using Haskell to generate Python here...):
+The default options just chucks it all to the wind and goes for `DangerMode` (because, seriously, we're using Haskell to generate Python here...).
 
+Following is an example of using the Servant DSL to describe endpoints and then using `servant-py` to create Python clients for those endpoints.
+
+#### Servant DSL API Description
 
 ``` haskell
 {-# LANGUAGE DataKinds                  #-}
@@ -74,7 +77,9 @@ main :: IO ()
 main = writePythonForAPI testApi requests (result </> "api.py")
 ```
 
-If you build this and run it, you will get some output that looks like the following:
+#### Generated Python Code
+
+If you build the above and run it, you will get some output that looks like the following:
 
 ```python
 

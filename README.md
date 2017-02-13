@@ -82,7 +82,6 @@ main = writePythonForAPI testApi requests (result </> "api.py")
 If you build the above and run it, you will get some output that looks like the following:
 
 ```python
-
 from urllib import parse
 
 import requests
@@ -92,23 +91,23 @@ def post_counterreqheader():
     POST "counter-req-header"
 
     """
-    url = "/counter-req-header"
+    url = "http://localhost:8000/counter-req-header"
 
     resp = requests.post(url)
     resp.raise_for_status()
     return resp.json()
 
 
-def get_counterqueryparam(sortby, header_SomeHeader):
+def get_counterqueryparam(sortby, headerSomeHeader):
     """
     GET "counter-queryparam"
 
     """
-    url = "/counter-queryparam"
+    url = "http://localhost:8000/counter-queryparam"
 
     headers = {"Some-Header": headerSomeHeader}
     params = {"sortby": sortby}
-    resp = requests.get(url
+    resp = requests.get(url,
                         headers=headers,
                         params=params)
 
@@ -121,10 +120,10 @@ def get_loginqueryflag(published):
     GET "login-queryflag"
 
     """
-    url = "/login-queryflag"
+    url = "http://localhost:8000/login-queryflag"
 
     params = {"published": published}
-    resp = requests.get(url
+    resp = requests.get(url,
                         params=params)
 
     resp.raise_for_status()
@@ -136,10 +135,10 @@ def post_loginparamsauthorswithreqBody(authors, data):
     POST "login-params-authors-with-reqBody"
 
     """
-    url = "/login-params-authors-with-reqBody"
+    url = "http://localhost:8000/login-params-authors-with-reqBody"
 
     params = {"authors": authors}
-    resp = requests.post(url
+    resp = requests.post(url,
                          params=params,
                          json=data)
 
@@ -155,12 +154,12 @@ def post_loginwithpathvarandheader_by_id_by_Name_by_hungrig(id, Name, hungrig, d
         Name
         hungrig
     """
-    url = "/login-with-path-var-and-header/{id}/{Name}/{hungrig}".format(
+    url = "http://localhost:8000/login-with-path-var-and-header/{id}/{Name}/{hungrig}".format(
         id=parse.quote(id),
         Name=parse.quote(Name),
         hungrig=parse.quote(hungrig))
 
-    resp = requests.post(url
+    resp = requests.post(url,
                          json=data)
 
     resp.raise_for_status()

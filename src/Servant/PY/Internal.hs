@@ -174,22 +174,19 @@ filterBmpChars = Set.filter (< '\65536')
 -- This function creates a dict where the keys are string representations of variable
 -- names. This is due to the way arguments are passed into the function, and these
 -- arguments named params. In other words, [("key", "key")] becomes: {"key": key}
-toPyDict :: [(Text, Text)] -> Text
+toPyDict :: [Text] -> Text
 toPyDict dict
   | null dict = "{}"
   | otherwise = "{" <> insides <> "}"
   where insides = mconcat $ combiner <$> dict
-        combiner (a,b) = "\"" <> a <> "\": " <> b
+        combiner a = "\"" <> a <> "\": " <> a
 
 -- Query params are passed into the function that makes the request, so we make
 -- a python dict out of them.
 toPyParams :: [QueryArg f] -> Text
 toPyParams [] = ""
-toPyParams qargs = toPyDict . tuplicious $ paramList
+toPyParams qargs = toPyDict paramList
   where paramList = fmap (\qarg -> qarg ^. queryArgName.argName._PathSegment) qargs
-
-tuplicious :: [Text] -> [(Text, Text)]
-tuplicious = foldr (\x xs -> (x, x) : xs ) []
 
 toPyHeader :: HeaderArg f -> Text
 toPyHeader (HeaderArg n)

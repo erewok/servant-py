@@ -20,16 +20,16 @@ import           Servant.PY.Internal
 -- | Generate python functions that use the requests library.
 --   Uses 'defCommonGeneratorOptions' for the generator options.
 requests :: PythonGenerator
-requests reqs = defPyImports <> mconcat (map requestsGeneratorWithDef reqs)
+requests reqs = defPyImports <> mconcat (map requestsWithDef reqs)
 
 -- | Generate python functions that use the requests library.
 --   Lets you specify your own 'CommonGeneratorOptions'.
 requestsWith :: CommonGeneratorOptions -> PythonGenerator
-requestsWith opts = mconcat . map (generatePyRequestWith opts)
+requestsWith opts reqs = mconcat (map (generatePyRequestWith opts) reqs)
 
 -- | python codegen using requests with default options
-requestsGeneratorWithDef :: PyRequest -> Text
-requestsGeneratorWithDef = generatePyRequestWith defCommonGeneratorOptions
+requestsWithDef :: PyRequest -> Text
+requestsWithDef = generatePyRequestWith defCommonGeneratorOptions
 
 defPyImports :: Text
 defPyImports =

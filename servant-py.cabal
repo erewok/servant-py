@@ -1,5 +1,5 @@
 name:                servant-py
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Automatically derive python functions to query servant webservices.
 description:
   Automatically derive python functions to query servant webservices.
@@ -65,10 +65,20 @@ executable servant-py-exe
 test-suite servant-py-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
+  ghc-options:         -Wall
   main-is:             Spec.hs
+  other-modules:
+      Servant.PYSpec
+      Servant.Custom.PYHeaders
   build-depends:       base
                      , servant-py
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+                     , base-compat
+                     , hspec
+                     , hspec-expectations
+                     , lens
+                     , QuickCheck
+                     , servant
+                     , text
   default-language:    Haskell2010
 
 source-repository head

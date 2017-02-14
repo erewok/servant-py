@@ -89,6 +89,7 @@ defaultPyIndent = indenter 4
 -- to other Ints. Then, to get your indentation, pass `indent` to the created function
 indenter :: Int -> Proxy Indent -> Text
 indenter width space = mconcat $ width `replicate` (T.pack . symbolVal) space
+{-# INLINE indenter #-}
 
 
 -- Created python Functions can have different return styles

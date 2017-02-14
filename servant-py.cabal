@@ -69,7 +69,7 @@ test-suite servant-py-test
   main-is:             Spec.hs
   other-modules:
       Servant.PYSpec
-      Servant.Custom.PYHeaders
+      Servant.PY.InternalSpec
   build-depends:       base
                      , servant-py
                      , base-compat

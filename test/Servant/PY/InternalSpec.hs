@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeOperators       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Servant.PYSpec where
+module Servant.PY.InternalSpec where
 
 import           Data.Either                                (isRight)
 import           Data.Monoid                                ()
@@ -59,3 +59,11 @@ internalSpec :: Spec
 internalSpec = describe "Internal" $ do
     it "should only indent using whitespace" $
       property $ \n -> indenter n indent == mconcat (replicate n (T.pack " "))
+
+    -- it "should generate only valid python identifiers for any ASCII route" $ do
+    --     let parseIdentifier = fmap T.pack ""
+    --     property $ \x -> let valid = toValidFunctionName $ getASCII x in
+    --                      Right valid == parseIdentifier valid
+    --
+    -- it "should generate a valid python identifier when supplied with hyphens, unicode whitespace, non-bmp unicode" $ do
+    --     toValidFunctionName "a_--a\66352b\6158c\65075" `shouldBe` "a_abc\65075"

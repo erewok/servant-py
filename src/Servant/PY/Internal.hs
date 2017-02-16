@@ -22,9 +22,11 @@ module Servant.PY.Internal
   , toPyDict
   , toPyParams
   , captures
+  , withFormattedCaptures
   , buildDocString
   , buildHeaderDict
   , functionArguments
+  , formatBuilder
   -- re-exports
   , (:<|>)(..)
   , (:>)

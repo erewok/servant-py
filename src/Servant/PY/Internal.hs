@@ -67,6 +67,7 @@ import           Data.Monoid
 import           Data.Proxy
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
+import           Data.Text.Encoding  (decodeUtf8)
 import           GHC.TypeLits
 import           Servant.Foreign
 
@@ -269,11 +270,18 @@ capturesToFormatArgs segments = map getSegment $ filter isCapture segments
         getSegment _ = ""
         getCapture s = s ^. argName . _PathSegment
 
-buildDocString :: T.Text -> PyRequest -> CommonGeneratorOptions -> T.Text
-buildDocString method req opts = T.toUpper method <> " \"" <> url <> "\n"
-                                                  <> if null args then "" else argDocs
+buildDocString :: PyRequest -> CommonGeneratorOptions -> T.Text
+buildDocString req opts = T.toUpper method <> " \"" <> url <> "\n"
+                                                  <> includeArgs <> "\n\n"
+                                                  <> indent' <> "Returns: " <> "\n"
+                                                  <> indent' <> indent' <> returnVal
   where args = capturesToFormatArgs $ req ^.. reqUrl.path.traverse
+        method = decodeUtf8 $ req ^. reqMethod
         url = makePyUrl' $ req ^.. reqUrl.path.traverse
+        includeArgs = if null args then "" else argDocs
         argDocs = indent' <> "Args: " <> "\n"
                   <> indent' <> indent' <> T.intercalate ("\n" <> indent' <> indent') args
         indent' = indentation opts indent
+        returnVal = case returnMode opts of
+          DangerMode -> "JSON response from the endpoint"
+          RawResponse -> "response (requests.Response) from issuing the request"

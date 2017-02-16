@@ -68,7 +68,7 @@ generatePyRequestWith opts req = "\n" <>
         remaining = remainingReqCall $ PyRequestArgs (not . null $ hs) (not . null $ queryparams) hasBody
         paramDef
           | null queryparams = ""
-          | otherwise = indent' <> "params = " <> toPyParams queryparams <> "\n"
+          | otherwise = indent' <> "params = " <> toPyParams (indent' <> indent') queryparams <> "\n"
         headerDef
           | null hs = ""
           | otherwise = indent' <> "headers = " <> buildHeaderDict hs <> "\n"

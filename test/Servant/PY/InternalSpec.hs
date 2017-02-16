@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
@@ -9,13 +9,13 @@
 
 module Servant.PY.InternalSpec where
 
-import           Data.Either                                (isRight)
+import           Data.Aeson
+import qualified Data.ByteString.Char8                      as B
 import           Data.Monoid                                ()
-import           Data.Monoid.Compat                         ((<>))
 import           Data.Proxy
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
-import           GHC.TypeLits
+import           GHC.Generics
 import           Prelude                                    ()
 import           Prelude.Compat
 import           Test.Hspec                                 hiding
@@ -27,9 +27,36 @@ import           Test.QuickCheck                            (Arbitrary (..),
 
 import           Servant.API.ContentTypes
 import           Servant.API.Internal.Test.ComprehensiveAPI
+import           Servant.Foreign
 
 import           Servant.PY.Internal
 
+
+data SomeJson = SomeJson
+ { uvalue       :: !T.Text
+ , pvalue       :: !T.Text
+ , otherMissing :: Maybe T.Text
+ } deriving (Eq, Show, Generic)
+instance ToJSON SomeJson
+
+-- * Our API type
+type TestApi = "counter-req-header" :> Post '[JSON] SomeJson
+          :<|> "counter-queryparam"
+            :> QueryParam "sortby" T.Text
+            :> Header "Some-Header" T.Text :> Get '[JSON] SomeJson
+          :<|> "login-queryflag" :> QueryFlag "published" :> Get '[JSON] SomeJson
+          :<|> "login-params-authors-with-reqBody"
+            :> QueryParams "authors" T.Text
+            :> ReqBody '[JSON] SomeJson :> Post '[JSON] SomeJson
+          :<|> "login-with-path-var-and-header"
+            :> Capture "id" Int
+            :> Capture "Name" T.Text
+            :> Capture "hungrig" Bool
+            :> ReqBody '[JSON] SomeJson
+            :> Post '[JSON] (Headers '[Header "test-head" B.ByteString] SomeJson)
+
+testApi :: Proxy TestApi
+testApi = Proxy
 
 customOptions :: CommonGeneratorOptions
 customOptions = defCommonGeneratorOptions
@@ -60,10 +87,17 @@ internalSpec = describe "Internal" $ do
     it "should only indent using whitespace" $
       property $ \n -> indenter n indent == mconcat (replicate n (T.pack " "))
 
-    -- it "should generate only valid python identifiers for any ASCII route" $ do
-    --     let parseIdentifier = fmap T.pack ""
-    --     property $ \x -> let valid = toValidFunctionName $ getASCII x in
-    --                      Right valid == parseIdentifier valid
-    --
-    -- it "should generate a valid python identifier when supplied with hyphens, unicode whitespace, non-bmp unicode" $ do
-    --     toValidFunctionName "a_--a\66352b\6158c\65075" `shouldBe` "a_abc\65075"
+    it "should generate a valid python identifier when supplied with hyphens, unicode whitespace, non-bmp unicode" $
+      toValidFunctionName "a_--a\66352b\6158c\65075" `shouldBe` "a_abc\65075"
+
+    it "should produce PyDicts where the key is a quoted version of the variable name" $ do
+      let dict = toPyDict "  " ["forty", "one", "people"]
+      dict `shouldBe` "{\"forty\": forty,\n  \"one\": one,\n  \"people\": people}"
+
+    let reqList = listFromAPI (Proxy :: Proxy NoTypes) (Proxy :: Proxy NoContent) (Proxy :: Proxy TestApi)
+    it "should correctly find captures" $ do
+      let captured = captures . last $ reqList
+      captured `shouldBe` ["id", "Name", "hungrig"]
+    it "should not incorrectly find captures" $ do
+      let captured = captures . head $ reqList
+      captured `shouldBe` []

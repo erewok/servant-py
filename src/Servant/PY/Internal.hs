@@ -175,18 +175,18 @@ filterBmpChars = Set.filter (< '\65536')
 -- This function creates a dict where the keys are string representations of variable
 -- names. This is due to the way arguments are passed into the function, and these
 -- arguments named params. In other words, [("key", "key")] becomes: {"key": key}
-toPyDict :: [Text] -> Text
-toPyDict dict
+toPyDict :: Text -> [Text] -> Text
+toPyDict offset dict
   | null dict = "{}"
-  | otherwise = "{" <> insides <> "}"
-  where insides = mconcat $ combiner <$> dict
+  | otherwise = "{" <> T.intercalate (",\n" <> offset) insides <> "}"
+  where insides = combiner <$> dict
         combiner a = "\"" <> a <> "\": " <> a
 
 -- Query params are passed into the function that makes the request, so we make
 -- a python dict out of them.
-toPyParams :: [QueryArg f] -> Text
-toPyParams [] = ""
-toPyParams qargs = toPyDict paramList
+toPyParams :: Text -> [QueryArg f] -> Text
+toPyParams _ [] = ""
+toPyParams offset qargs = toPyDict offset paramList
   where paramList = fmap (\qarg -> qarg ^. queryArgName.argName._PathSegment) qargs
 
 toPyHeader :: HeaderArg f -> Text
@@ -255,7 +255,7 @@ withFormattedCaptures offset segments = formattedCaptures (capturesToFormatArgs 
                               <> ")"
 
 formatBuilder :: Text -> Text
-formatBuilder val = val <> "=parse.quote("<> val <> ")"
+formatBuilder val = val <> "=parse.quote(str("<> val <> "))"
 
 segmentToStr :: Segment f -> Text
 segmentToStr (Segment (Static s)) = s ^. _PathSegment

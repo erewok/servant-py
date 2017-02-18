@@ -8,7 +8,8 @@ module Servant.PY ( -- * Generating javascript code from an API type
     pyForAPI
   , writePythonForAPI
   , PythonGenerator
-
+  , python
+  , pythonTyped
   , -- * Options common to all generators
     CommonGeneratorOptions(..)
   , defCommonGeneratorOptions
@@ -24,7 +25,6 @@ module Servant.PY ( -- * Generating javascript code from an API type
 
   , -- * Misc.
     listFromAPI
-  , python
   , NoTypes
   , GenerateList(..)
   , FunctionName(..)
@@ -36,6 +36,7 @@ import qualified Data.Text           as T
 import           Servant.Foreign
 
 import           Servant.PY.Internal
+import           Servant.PY.Python
 import           Servant.PY.Requests
 
 -- | Generate the data necessary to generate Python code
@@ -43,6 +44,9 @@ import           Servant.PY.Requests
 --   of type 'PyRequest'.
 python :: HasForeign NoTypes NoContent api => Proxy api -> Foreign NoContent api
 python p = foreignFor (Proxy :: Proxy NoTypes) (Proxy :: Proxy NoContent) p defReq
+
+pythonTyped :: HasForeign Python Text api => Proxy api -> Foreign Text api
+pythonTyped p = foreignFor (Proxy :: Proxy Python) (Proxy :: Proxy Text) p defReq
 
 -- | Directly generate all the Python functions for your API
 --   from a 'Proxy' for your API type. You can then write it to

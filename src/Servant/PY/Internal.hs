@@ -1,11 +1,13 @@
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE KindSignatures        #-}
-{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE KindSignatures    #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Servant.PY.Internal
   ( PythonGenerator
   , ReturnStyle(..)
+  , InformationLevel(..)
   , CommonGeneratorOptions(..)
   , defCommonGeneratorOptions
   , PyRequest
@@ -62,12 +64,12 @@ module Servant.PY.Internal
 import           Control.Lens                  hiding (List)
 import qualified Data.CharSet                  as Set
 import qualified Data.CharSet.Unicode.Category as Set
+import           Data.Data
 import           Data.Maybe                    (isJust)
 import           Data.Monoid
-import           Data.Proxy
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
-import           Data.Text.Encoding  (decodeUtf8)
+import           Data.Text.Encoding            (decodeUtf8)
 import           GHC.TypeLits
 import           Servant.Foreign
 
@@ -99,6 +101,10 @@ indenter width space = mconcat $ width `replicate` (T.pack . symbolVal) space
 data ReturnStyle = DangerMode  -- Throw caution to the wind and return JSON
                  | RawResponse  -- Return response object itself
 
+
+data InformationLevel = AsMuchAsPossible  -- Must use DeriveDataTypeable and do deriving (Data, Typeable)
+                      | Minimal  -- Really doesn't say much abotu the arguments of functions or return vals
+
 -- | This structure is used by specific implementations to let you
 -- customize the output
 data CommonGeneratorOptions = CommonGeneratorOptions
@@ -114,6 +120,8 @@ data CommonGeneratorOptions = CommonGeneratorOptions
   -- ^ indentation to use for Python codeblocks
   , returnMode          :: ReturnStyle
   -- ^ whether the generated functions return the raw response or content
+  , informationMode     :: InformationLevel
+  -- ^ if we should include more information on request bodies and objects returned
   }
 
 -- | Default options.
@@ -125,6 +133,7 @@ data CommonGeneratorOptions = CommonGeneratorOptions
 -- >   , urlPrefix = ""
 -- >   , indentation = "    "  -- 4 spaces
 -- >   , returnMode = DangerMode
+-- >   , informationMode = Minimal
 -- >   }
 -- @
 defCommonGeneratorOptions :: CommonGeneratorOptions
@@ -135,6 +144,7 @@ defCommonGeneratorOptions = CommonGeneratorOptions
   , urlPrefix = "http://localhost:8000"
   , indentation = defaultPyIndent
   , returnMode = DangerMode
+  , informationMode = Minimal
   }
 
 -- | Attempts to reduce the function name provided to that allowed by @'Foreign'@.
@@ -247,7 +257,7 @@ makePyUrl opts req offset = if url' == "\"" then "\"/\"" else url'
         pathParts = req ^.. reqUrl.path.traverse
 
 makePyUrl' :: [Segment f] -> Text
-makePyUrl' [] = ""
+makePyUrl' []       = ""
 makePyUrl' segments = T.intercalate "/" (map segmentToStr segments) <> "\""
 
 withFormattedCaptures :: Text -> [Segment f] -> Text
@@ -267,7 +277,7 @@ segmentToStr (Segment (Cap s))    = "{" <> s ^. argName . _PathSegment <> "}"
 capturesToFormatArgs :: [Segment f] -> [Text]
 capturesToFormatArgs segments = map getSegment $ filter isCapture segments
   where getSegment (Segment (Cap a)) = getCapture a
-        getSegment _ = ""
+        getSegment _                 = ""
         getCapture s = s ^. argName . _PathSegment
 
 buildDocString :: PyRequest -> CommonGeneratorOptions -> T.Text

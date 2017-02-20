@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE KindSignatures    #-}
 {-# LANGUAGE RankNTypes        #-}
@@ -10,8 +11,8 @@ module Servant.PY.Internal
   , InformationLevel(..)
   , CommonGeneratorOptions(..)
   , defCommonGeneratorOptions
+  , defTypedCommonGeneratorOptions
   , PyRequest
-  , PyTypedRequest
   , PythonTypedGenerator
   , defaultPyIndent
   , indent
@@ -77,12 +78,12 @@ import           Servant.Foreign
 
 
 -- A 'PythonGenerator' just takes the data found in the API type
--- for each endpoint and generates Python code as Text.
-type PythonGenerator = [PyRequest] -> Text
-type PyRequest = Req NoContent
+-- for each endpoint and generates Python code as Text. We have untyped and those
+-- that contain typing information.
+type PythonGenerator = [PyRequest NoContent] -> Text
+type PythonTypedGenerator = [PyRequest Text] -> Text
 
-type PyTypedRequest = Req Text
-type PythonTypedGenerator = [PyTypedRequest] -> Text
+type PyRequest = Req
 
 -- We'd like to encode at the type-level that indentation
 -- is some multiplication of whitespace (sorry: never tabs!)
@@ -107,7 +108,7 @@ data ReturnStyle = DangerMode  -- Throw caution to the wind and return JSON
                  | RawResponse  -- Return response object itself
 
 
-data InformationLevel = AsMuchAsPossible  -- Must use DeriveDataTypeable and do deriving (Data, Typeable)
+data InformationLevel = WithTypes  -- Must use Pragma DeriveDataTypeable and do deriving (Data, Typeable)
                       | Minimal  -- Really doesn't say much about the arguments of functions or return vals
 
 -- | This structure is used by specific implementations to let you
@@ -150,6 +151,17 @@ defCommonGeneratorOptions = CommonGeneratorOptions
   , indentation = defaultPyIndent
   , returnMode = DangerMode
   , informationMode = Minimal
+  }
+
+defTypedCommonGeneratorOptions :: CommonGeneratorOptions
+defTypedCommonGeneratorOptions = CommonGeneratorOptions
+  {
+    functionNameBuilder = snakeCase
+  , requestBody = "data"
+  , urlPrefix = "http://localhost:8000"
+  , indentation = defaultPyIndent
+  , returnMode = DangerMode
+  , informationMode = WithTypes
   }
 
 -- | Attempts to reduce the function name provided to that allowed by @'Foreign'@.
@@ -285,18 +297,27 @@ capturesToFormatArgs segments = map getSegment $ filter isCapture segments
         getSegment _                 = ""
         getCapture s = s ^. argName . _PathSegment
 
+captureArgsWithTypes :: [Segment Text] -> [Text]
+captureArgsWithTypes segments =  map getSegmentArgType (filter isCapture segments)
+  where getSegmentArgType (Segment (Cap a)) = pathPart a <> " (" <> a ^. argType <> ")"
+        getSegmentArgType _                 = ""
+        pathPart s = s ^. argName . _PathSegment
+
 buildDocString :: forall f. Req f -> CommonGeneratorOptions -> T.Text
 buildDocString req opts = T.toUpper method <> " \"" <> url <> "\n"
                                                   <> includeArgs <> "\n\n"
                                                   <> indent' <> "Returns: " <> "\n"
                                                   <> indent' <> indent' <> returnVal
-  where args = capturesToFormatArgs $ req ^.. reqUrl.path.traverse
-        method = decodeUtf8 $ req ^. reqMethod
+  where method = decodeUtf8 $ req ^. reqMethod
         url = makePyUrl' $ req ^.. reqUrl.path.traverse
         includeArgs = if null args then "" else argDocs
         argDocs = indent' <> "Args: " <> "\n"
                   <> indent' <> indent' <> T.intercalate ("\n" <> indent' <> indent') args
+
         indent' = indentation opts indent
+        args = case informationMode opts of
+          Minimal -> capturesToFormatArgs $ req ^.. reqUrl.path.traverse
+          WithTypes -> capturesToFormatArgs $ req ^.. reqUrl.path.traverse
         returnVal = case returnMode opts of
           DangerMode -> "JSON response from the endpoint"
           RawResponse -> "response (requests.Response) from issuing the request"

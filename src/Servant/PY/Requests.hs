@@ -24,19 +24,17 @@ requests :: PythonGenerator
 requests reqs = defPyImports <> mconcat (map requestsWithDef reqs)
 
 requestsTyped :: PythonTypedGenerator
-requestsTyped reqs = defPyImports <> mconcat (map requestsTypedWithDef reqs)
+requestsTyped reqs = defPyImports <> mconcat (map requestBuilder reqs)
+  where requestBuilder = generatePyRequestWith defTypedCommonGeneratorOptions
 
 -- | Generate python functions that use the requests library.
 --   Lets you specify your own 'CommonGeneratorOptions'.
-requestsWith :: CommonGeneratorOptions -> PythonGenerator
+requestsWith :: forall f. CommonGeneratorOptions -> [Req f] -> Text
 requestsWith opts reqs = mconcat (map (generatePyRequestWith opts) reqs)
 
 -- | python codegen using requests with default options
-requestsWithDef :: PyRequest -> Text
+requestsWithDef :: forall f. Req f -> Text
 requestsWithDef = generatePyRequestWith defCommonGeneratorOptions
-
-requestsTypedWithDef :: PyTypedRequest -> Text
-requestsTypedWithDef = generatePyTypedRequestWith defCommonGeneratorOptions
 
 defPyImports :: Text
 defPyImports =
@@ -47,48 +45,8 @@ defPyImports =
     ]
 
 -- | python codegen with requests
-generatePyRequestWith :: CommonGeneratorOptions -> PyRequest -> Text
+generatePyRequestWith :: forall f. CommonGeneratorOptions -> Req f -> Text
 generatePyRequestWith opts req = "\n" <>
-    "def " <> fname <> "(" <> argsStr <> "):\n"
-    <> indent' <> docStringMarker
-    <> indent' <> buildDocString req opts <> "\n"
-    <> indent' <> docStringMarker
-    <> indent' <> "url = " <> makePyUrl opts req (indent' <> indent') <> "\n\n"
-    <> headerDef
-    <> paramDef
-    <> requestBuilder <> "(url" <> remaining (T.length requestBuilder + 1) <> "\n"
-    <> functionReturn (returnMode opts) (indentation opts)
-    <> "\n\n"
-   -- where argsStr = functionArguments req
-  where argsStr = T.intercalate ", " args
-        args = captures req
-             ++ map (view $ queryArgName . argPath) queryparams
-             ++ body
-             ++ map (toValidFunctionName
-                    . (<>) "header"
-                    . view (headerArg . argPath)
-                    ) hs
-        hs = req ^. reqHeaders
-        fname = toValidFunctionName (functionNameBuilder opts $ req ^. reqFuncName)
-        method = (T.toLower . decodeUtf8) $ req ^. reqMethod
-
-        remaining = remainingReqCall $ PyRequestArgs (not . null $ hs) (not . null $ queryparams) hasBody
-        paramDef
-          | null queryparams = ""
-          | otherwise = indent' <> "params = " <> toPyParams (indent' <> indent') queryparams <> "\n"
-        headerDef
-          | null hs = ""
-          | otherwise = indent' <> "headers = " <> buildHeaderDict hs <> "\n"
-        requestBuilder = indent' <> "resp = requests." <> method
-        hasBody = isJust (req ^. reqBody)
-        queryparams = req ^.. reqUrl.queryStr.traverse
-        body = [requestBody opts | hasBody]
-        indent' = indentation opts indent
-        docStringMarker = "\"\"\"\n"
-
--- | python codegen with requests
-generatePyTypedRequestWith :: CommonGeneratorOptions -> PyTypedRequest -> Text
-generatePyTypedRequestWith opts req = "\n" <>
     "def " <> fname <> "(" <> argsStr <> "):\n"
     <> indent' <> docStringMarker
     <> indent' <> buildDocString req opts <> "\n"

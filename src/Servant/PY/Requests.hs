@@ -91,7 +91,7 @@ generatePyTypedRequestWith :: CommonGeneratorOptions -> PyTypedRequest -> Text
 generatePyTypedRequestWith opts req = "\n" <>
     "def " <> fname <> "(" <> argsStr <> "):\n"
     <> indent' <> docStringMarker
-    <> indent' <> buildDocStringWithTypes req opts <> "\n"
+    <> indent' <> buildDocString req opts <> "\n"
     <> indent' <> docStringMarker
     <> indent' <> "url = " <> makePyUrl opts req (indent' <> indent') <> "\n\n"
     <> headerDef

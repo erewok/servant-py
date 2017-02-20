@@ -28,7 +28,6 @@ module Servant.PY.Internal
   , captures
   , withFormattedCaptures
   , buildDocString
-  , buildDocStringWithTypes
   , buildHeaderDict
   , functionArguments
   , formatBuilder
@@ -286,24 +285,8 @@ capturesToFormatArgs segments = map getSegment $ filter isCapture segments
         getSegment _                 = ""
         getCapture s = s ^. argName . _PathSegment
 
-buildDocString :: PyRequest -> CommonGeneratorOptions -> T.Text
+buildDocString :: forall f. Req f -> CommonGeneratorOptions -> T.Text
 buildDocString req opts = T.toUpper method <> " \"" <> url <> "\n"
-                                                  <> includeArgs <> "\n\n"
-                                                  <> indent' <> "Returns: " <> "\n"
-                                                  <> indent' <> indent' <> returnVal
-  where args = capturesToFormatArgs $ req ^.. reqUrl.path.traverse
-        method = decodeUtf8 $ req ^. reqMethod
-        url = makePyUrl' $ req ^.. reqUrl.path.traverse
-        includeArgs = if null args then "" else argDocs
-        argDocs = indent' <> "Args: " <> "\n"
-                  <> indent' <> indent' <> T.intercalate ("\n" <> indent' <> indent') args
-        indent' = indentation opts indent
-        returnVal = case returnMode opts of
-          DangerMode -> "JSON response from the endpoint"
-          RawResponse -> "response (requests.Response) from issuing the request"
-
-buildDocStringWithTypes :: PyTypedRequest -> CommonGeneratorOptions -> T.Text
-buildDocStringWithTypes req opts = T.toUpper method <> " \"" <> url <> "\n"
                                                   <> includeArgs <> "\n\n"
                                                   <> indent' <> "Returns: " <> "\n"
                                                   <> indent' <> indent' <> returnVal

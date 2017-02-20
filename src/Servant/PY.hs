@@ -48,6 +48,9 @@ import           Servant.PY.Requests
 python :: HasForeign NoTypes NoContent api => Proxy api -> Foreign NoContent api
 python p = foreignFor (Proxy :: Proxy NoTypes) (Proxy :: Proxy NoContent) p defReq
 
+-- | Generate the data necessary to generate Python code
+--   for all the endpoints of an API, but try to get as much type-information
+-- into Python docstrings, in order to aid discoverability of client functions.
 pythonTyped :: HasForeign Python Text api => Proxy api -> Foreign Text api
 pythonTyped p = foreignFor (Proxy :: Proxy Python) (Proxy :: Proxy Text) p defReq
 

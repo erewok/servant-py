@@ -1,5 +1,5 @@
 *~
 .stack-work/
 build/
-examples/api.py
+examples/*py
 __pycache__

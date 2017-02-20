@@ -5,18 +5,21 @@
 {-# LANGUAGE TypeOperators         #-}
 
 module Servant.PY ( -- * Generating javascript code from an API type
-    pyForAPI
-  , writePythonForAPI
-  , PythonGenerator
+  PythonGenerator
+  , PythonTypedGenerator
   , python
   , pythonTyped
+  , writePythonForAPI
+  , pyForAPI
+  , pyTypedForAPI
+  , writeTypedPythonForAPI
   , -- * Options common to all generators
     CommonGeneratorOptions(..)
   , defCommonGeneratorOptions
 
   -- Requests library
   , requests
-
+  , requestsTyped
 
   , -- * Function renamers
     concatCase
@@ -66,3 +69,21 @@ writePythonForAPI :: (HasForeign NoTypes NoContent api, GenerateList NoContent (
               -> FilePath -- ^ path to the file you want to write the resulting javascript code into
               -> IO ()
 writePythonForAPI p gen fp = writeFile fp (T.unpack $ pyForAPI p gen)
+
+
+-- | Directly generate all the Python functions for your API
+--   from a 'Proxy' for your API type. You can then write it to
+--   a file or integrate it in a page, for example.
+pyTypedForAPI :: (HasForeign Python T.Text api, GenerateList T.Text (Foreign T.Text api))
+         => Proxy api -- ^ proxy for your API type
+         -> PythonTypedGenerator -- ^ python code generator to use (requests is the only one for now)
+         -> Text                -- ^ a text that you can embed in your pages or write to a file
+pyTypedForAPI p gen = gen (listFromAPI (Proxy :: Proxy Python) (Proxy :: Proxy T.Text) p)
+
+
+writeTypedPythonForAPI :: (HasForeign Python T.Text api, GenerateList T.Text (Foreign T.Text api))
+              => Proxy api -- ^ proxy for your API type
+              -> PythonTypedGenerator -- ^ python code generator to use (requests is the only one for now)
+              -> FilePath -- ^ path to the file you want to write the resulting javascript code into
+              -> IO ()
+writeTypedPythonForAPI p gen fp = writeFile fp (T.unpack $ pyTypedForAPI p gen)

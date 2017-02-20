@@ -57,6 +57,7 @@ executable servant-py-exe
                      , aeson
                      , wai
                      , servant
+                     , servant-foreign
                      , servant-server
                      , servant-blaze
                      , text

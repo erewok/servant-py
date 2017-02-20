@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TypeOperators              #-}
 
 module Main where
@@ -32,8 +33,20 @@ data LoginForm = LoginForm
  , otherMissing :: Maybe T.Text
  } deriving (Eq, Show, Generic, Typeable, Data)
 instance ToJSON LoginForm
+
+-- You could provide a direct instance of your types to represent them as strings
 -- instance HasForeignType Python T.Text LoginForm where
---   typeFor _ _ _ = "{\"username\": str, \"password\": str, \"otherMissing\":  Optional str}"
+--   typeFor _ _ _ = "{\"username\": str, \"password\": str, \"otherMissing\":  Maybe Text}"
+
+
+-- Alternately, if you make your instance derive Typeable and Data, and
+-- you enable the pragma DeriveDataTypeable,
+-- then you can use recordToDict to automatically derive your records
+instance HasForeignType Python T.Text LoginForm where
+  typeFor _ _ _ = recordToDict (undefined :: LoginForm) LoginForm
+
+instance HasForeignType Python T.Text Counter where
+  typeFor _ _ _ = recordToDict (undefined :: Counter) Counter
 
 -- * Our API type
 type TestApi = "counter-req-header" :> Post '[JSON] Counter
@@ -44,12 +57,12 @@ type TestApi = "counter-req-header" :> Post '[JSON] Counter
           :<|> "login-params-authors-with-reqBody"
             :> QueryParams "authors" T.Text
             :> ReqBody '[JSON] LoginForm :> Post '[JSON] LoginForm
-          -- :<|> "login-with-path-var-and-header"
-          --   :> Capture "id" Int
-          --   :> Capture "Name" T.Text
-          --   :> Capture "hungrig" Bool
-          --   :> ReqBody '[JSON] LoginForm
-          --   :> Post '[JSON] (Headers '[Header "test-head" B.ByteString] LoginForm)
+          :<|> "login-with-path-var-and-header"
+            :> Capture "id" Int
+            :> Capture "Name" T.Text
+            :> Capture "hungrig" Bool
+            :> ReqBody '[JSON] LoginForm
+            :> Post '[JSON] (Headers '[Header "test-head" B.ByteString] LoginForm)
 
 testApi :: Proxy TestApi
 testApi = Proxy
@@ -59,4 +72,6 @@ result :: FilePath
 result = "examples"
 
 main :: IO ()
-main = writePythonForAPI testApi requests (result </> "api.py")
+main = do
+  writePythonForAPI testApi requests (result </> "api.py")
+  writeTypedPythonForAPI testApi requestsTyped (result </> "api_typed.py")

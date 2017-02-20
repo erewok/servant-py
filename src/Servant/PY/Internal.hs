@@ -11,6 +11,8 @@ module Servant.PY.Internal
   , CommonGeneratorOptions(..)
   , defCommonGeneratorOptions
   , PyRequest
+  , PyTypedRequest
+  , PythonTypedGenerator
   , defaultPyIndent
   , indent
   , Indent
@@ -26,6 +28,7 @@ module Servant.PY.Internal
   , captures
   , withFormattedCaptures
   , buildDocString
+  , buildDocStringWithTypes
   , buildHeaderDict
   , functionArguments
   , formatBuilder
@@ -79,6 +82,9 @@ import           Servant.Foreign
 type PythonGenerator = [PyRequest] -> Text
 type PyRequest = Req NoContent
 
+type PyTypedRequest = Req Text
+type PythonTypedGenerator = [PyTypedRequest] -> Text
+
 -- We'd like to encode at the type-level that indentation
 -- is some multiplication of whitespace (sorry: never tabs!)
 type Indent = (" " :: Symbol)
@@ -103,7 +109,7 @@ data ReturnStyle = DangerMode  -- Throw caution to the wind and return JSON
 
 
 data InformationLevel = AsMuchAsPossible  -- Must use DeriveDataTypeable and do deriving (Data, Typeable)
-                      | Minimal  -- Really doesn't say much abotu the arguments of functions or return vals
+                      | Minimal  -- Really doesn't say much about the arguments of functions or return vals
 
 -- | This structure is used by specific implementations to let you
 -- customize the output
@@ -216,7 +222,7 @@ toPyHeader (ReplaceHeaderArg n p)
     pn = "{" <> n ^. argName . _PathSegment <> "}"
     rp = T.replace pn "" p
 
-captures :: Req NoContent -> [T.Text]
+captures :: forall f. Req f -> [T.Text]
 captures req = map (view argPath . captureArg)
          . filter isCapture
          $ req ^. reqUrl.path
@@ -228,7 +234,7 @@ buildHeaderDict hs = "{" <> headers <> "}"
         headerStr header = "\"" <> header ^. headerArg . argPath <> "\": "
                            <> toPyHeader header
 
-functionArguments :: PyRequest -> T.Text
+functionArguments :: forall f. Req f -> T.Text
 functionArguments req =
   mconcat [ T.intercalate ", " args]
   where
@@ -282,6 +288,22 @@ capturesToFormatArgs segments = map getSegment $ filter isCapture segments
 
 buildDocString :: PyRequest -> CommonGeneratorOptions -> T.Text
 buildDocString req opts = T.toUpper method <> " \"" <> url <> "\n"
+                                                  <> includeArgs <> "\n\n"
+                                                  <> indent' <> "Returns: " <> "\n"
+                                                  <> indent' <> indent' <> returnVal
+  where args = capturesToFormatArgs $ req ^.. reqUrl.path.traverse
+        method = decodeUtf8 $ req ^. reqMethod
+        url = makePyUrl' $ req ^.. reqUrl.path.traverse
+        includeArgs = if null args then "" else argDocs
+        argDocs = indent' <> "Args: " <> "\n"
+                  <> indent' <> indent' <> T.intercalate ("\n" <> indent' <> indent') args
+        indent' = indentation opts indent
+        returnVal = case returnMode opts of
+          DangerMode -> "JSON response from the endpoint"
+          RawResponse -> "response (requests.Response) from issuing the request"
+
+buildDocStringWithTypes :: PyTypedRequest -> CommonGeneratorOptions -> T.Text
+buildDocStringWithTypes req opts = T.toUpper method <> " \"" <> url <> "\n"
                                                   <> includeArgs <> "\n\n"
                                                   <> indent' <> "Returns: " <> "\n"
                                                   <> indent' <> indent' <> returnVal

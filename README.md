@@ -173,8 +173,3 @@ $ stack build --flag servant-py:example
 $ stack exec servant-py-exe
 $ cat examples/api.py
 ```
-
-## TODO
-
-1. Add Tests Pronto!
-2. Fix `urllib.parse.quote` on non-string args. Need to know more about what's getting passed or convert all to strings.

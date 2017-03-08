@@ -1,14 +1,15 @@
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE KindSignatures        #-}
-{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE KindSignatures      #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Servant.PY.Internal
   ( PythonGenerator
   , ReturnStyle(..)
+  , PythonRequest(..)
+  , PyRequestArgs(..)
   , CommonGeneratorOptions(..)
   , defCommonGeneratorOptions
-  , PyRequest
   , defaultPyIndent
   , indent
   , Indent
@@ -18,10 +19,18 @@ module Servant.PY.Internal
   , segmentToStr
   , capturesToFormatArgs
   , toValidFunctionName
+  , functionName
   , toPyHeader
+  , retrieveHeaders
+  , getHeaderDict
+  , retrieveHeaderText
   , toPyDict
   , toPyParams
+  , getParams
+  , paramNames
   , captures
+  , getMethod
+  , hasBody
   , withFormattedCaptures
   , buildDocString
   , buildHeaderDict
@@ -62,20 +71,23 @@ module Servant.PY.Internal
 import           Control.Lens                  hiding (List)
 import qualified Data.CharSet                  as Set
 import qualified Data.CharSet.Unicode.Category as Set
+import           Data.Data
 import           Data.Maybe                    (isJust)
 import           Data.Monoid
-import           Data.Proxy
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
-import           Data.Text.Encoding  (decodeUtf8)
+import           Data.Text.Encoding            (decodeUtf8)
 import           GHC.TypeLits
 import           Servant.Foreign
 
 
 -- A 'PythonGenerator' just takes the data found in the API type
 -- for each endpoint and generates Python code as Text.
-type PythonGenerator = [PyRequest] -> Text
-type PyRequest = Req NoContent
+-- There are `NoContent` requests and Text requests with typing information.
+type PythonGenerator = [PythonRequest] -> Text
+data PythonRequest = TypedPythonRequest (Req Text)
+                   | UnTypedPythonRequest (Req NoContent)
+                   deriving (Eq, Show)
 
 -- We'd like to encode at the type-level that indentation
 -- is some multiplication of whitespace (sorry: never tabs!)
@@ -85,6 +97,7 @@ indent :: Proxy Indent
 indent = Proxy
 
 -- The defaultPyIndent function is 4 spaces.
+-- You can create a different indentation width by passing a different Int to indenter.
 defaultPyIndent :: Proxy Indent -> Text
 defaultPyIndent = indenter 4
 
@@ -99,6 +112,13 @@ indenter width space = mconcat $ width `replicate` (T.pack . symbolVal) space
 data ReturnStyle = DangerMode  -- Throw caution to the wind and return JSON
                  | RawResponse  -- Return response object itself
 
+
+data PyRequestArgs = PyRequestArgs {
+  hasHeaders  :: Bool
+  , hasParams :: Bool
+  , hasData   :: Bool
+  } deriving (Show)
+
 -- | This structure is used by specific implementations to let you
 -- customize the output
 data CommonGeneratorOptions = CommonGeneratorOptions
@@ -111,7 +131,7 @@ data CommonGeneratorOptions = CommonGeneratorOptions
   , urlPrefix           :: Text
     -- ^ a prefix we should add to the Url in the codegen
   , indentation         :: Proxy Indent -> Text
-  -- ^ indentation to use for Python codeblocks
+  -- ^ indentation to use for Python codeblocks. Create this function by passing an Int to indenter.
   , returnMode          :: ReturnStyle
   -- ^ whether the generated functions return the raw response or content
   }
@@ -169,7 +189,11 @@ toValidFunctionName t =
                     , Set.connectorPunctuation
                     ])
 
--- Javascript identifiers can only contain codepoints in the Basic Multilingual Plane
+functionName :: CommonGeneratorOptions -> PythonRequest -> Text
+functionName opts (TypedPythonRequest req) = toValidFunctionName (functionNameBuilder opts $ req ^. reqFuncName)
+functionName opts (UnTypedPythonRequest req) = toValidFunctionName (functionNameBuilder opts $ req ^. reqFuncName)
+
+-- Identifiers can only contain codepoints in the Basic Multilingual Plane
 -- that is, codepoints that can be encoded in UTF-16 without a surrogate pair (UCS-2)
 -- that is, codepoints that can fit in 16-bits, up to 0xffff (65535)
 filterBmpChars :: Set.CharSet -> Set.CharSet
@@ -187,11 +211,22 @@ toPyDict offset dict
 
 -- Query params are passed into the function that makes the request, so we make
 -- a python dict out of them.
+getParams :: Text -> PythonRequest -> Text
+getParams offset (TypedPythonRequest req) = toPyParams offset $ req ^.. reqUrl.queryStr.traverse
+getParams offset (UnTypedPythonRequest req) = toPyParams offset $ req ^.. reqUrl.queryStr.traverse
+
 toPyParams :: Text -> [QueryArg f] -> Text
 toPyParams _ [] = ""
 toPyParams offset qargs = toPyDict offset paramList
   where paramList = fmap (\qarg -> qarg ^. queryArgName.argName._PathSegment) qargs
 
+-- We also need to make sure we can retrieve just the param names for function args.
+paramNames :: PythonRequest -> [Text]
+paramNames (TypedPythonRequest req) = map (view $ queryArgName . argPath) $ req ^.. reqUrl.queryStr.traverse
+paramNames (UnTypedPythonRequest req) = map (view $ queryArgName . argPath) $ req ^.. reqUrl.queryStr.traverse
+
+-- Request headers are also passed into the function that makes the request, so we make
+-- a python dict out of them.
 toPyHeader :: HeaderArg f -> Text
 toPyHeader (HeaderArg n)
   = toValidFunctionName ("header" <> n ^. argName . _PathSegment)
@@ -206,11 +241,6 @@ toPyHeader (ReplaceHeaderArg n p)
     pn = "{" <> n ^. argName . _PathSegment <> "}"
     rp = T.replace pn "" p
 
-captures :: Req NoContent -> [T.Text]
-captures req = map (view argPath . captureArg)
-         . filter isCapture
-         $ req ^. reqUrl.path
-
 buildHeaderDict :: [HeaderArg f] -> Text
 buildHeaderDict [] = ""
 buildHeaderDict hs = "{" <> headers <> "}"
@@ -218,15 +248,23 @@ buildHeaderDict hs = "{" <> headers <> "}"
         headerStr header = "\"" <> header ^. headerArg . argPath <> "\": "
                            <> toPyHeader header
 
-functionArguments :: PyRequest -> T.Text
+getHeaderDict :: PythonRequest -> Text
+getHeaderDict (TypedPythonRequest req) = buildHeaderDict $ req ^. reqHeaders
+getHeaderDict (UnTypedPythonRequest req) = buildHeaderDict $ req ^. reqHeaders
+
+retrieveHeaders :: PythonRequest -> [T.Text]
+retrieveHeaders (TypedPythonRequest req) = retrieveHeaderText <$> req ^. reqHeaders
+retrieveHeaders (UnTypedPythonRequest req) = retrieveHeaderText <$> req ^. reqHeaders
+
+retrieveHeaderText :: forall f. HeaderArg f -> T.Text
+retrieveHeaderText header = header ^. headerArg . argPath
+
+
+functionArguments :: forall f. Req f -> T.Text
 functionArguments req =
   mconcat [ T.intercalate ", " args]
   where
-    args = captures' ++ qparam ++ body ++ headers
-
-    captures' = map (view argPath . captureArg)
-               $ filter isCapture
-               $ req ^. reqUrl . path
+    args = captures' req ++ qparam ++ body ++ headers
 
     qparam = map ((<>) "param_" . view (queryArgName . argPath)) queryParams
 
@@ -238,17 +276,31 @@ functionArguments req =
                     . view (headerArg . argPath)
                   ) $ req ^. reqHeaders
 
+captures :: PythonRequest -> [T.Text]
+captures (TypedPythonRequest req)   = captures' req
+captures (UnTypedPythonRequest req) = captures' req
 
-makePyUrl :: forall f. CommonGeneratorOptions -> Req f -> Text -> Text
-makePyUrl opts req offset = if url' == "\"" then "\"/\"" else url'
+
+captures' :: forall f. Req f -> [T.Text]
+captures' req = map (view argPath . captureArg)
+         . filter isCapture
+         $ req ^. reqUrl.path
+
+makePyUrl :: CommonGeneratorOptions -> PythonRequest -> Text -> Text
+makePyUrl opts (TypedPythonRequest req) offset   = makePyUrl' opts req offset
+makePyUrl opts (UnTypedPythonRequest req) offset = makePyUrl' opts req offset
+
+makePyUrl' :: forall f. CommonGeneratorOptions -> Req f -> Text -> Text
+makePyUrl' opts req offset = if url' == "\"" then "\"/\"" else url'
   where url' = "\"" <> urlPrefix opts <> "/"
-                    <> makePyUrl' pathParts
+                    <> getSegments pathParts
                     <> withFormattedCaptures offset pathParts
         pathParts = req ^.. reqUrl.path.traverse
 
-makePyUrl' :: [Segment f] -> Text
-makePyUrl' [] = ""
-makePyUrl' segments = T.intercalate "/" (map segmentToStr segments) <> "\""
+getSegments :: forall f. [Segment f] -> T.Text
+getSegments segments = if null segments
+                       then ""
+                       else T.intercalate "/" (map segmentToStr segments) <> "\""
 
 withFormattedCaptures :: Text -> [Segment f] -> Text
 withFormattedCaptures offset segments = formattedCaptures (capturesToFormatArgs segments)
@@ -267,21 +319,42 @@ segmentToStr (Segment (Cap s))    = "{" <> s ^. argName . _PathSegment <> "}"
 capturesToFormatArgs :: [Segment f] -> [Text]
 capturesToFormatArgs segments = map getSegment $ filter isCapture segments
   where getSegment (Segment (Cap a)) = getCapture a
-        getSegment _ = ""
+        getSegment _                 = ""
         getCapture s = s ^. argName . _PathSegment
 
-buildDocString :: PyRequest -> CommonGeneratorOptions -> T.Text
-buildDocString req opts = T.toUpper method <> " \"" <> url <> "\n"
+captureArgsWithTypes :: [Segment Text] -> [Text]
+captureArgsWithTypes segments =  map getSegmentArgType (filter isCapture segments)
+  where getSegmentArgType (Segment (Cap a)) = pathPart a <> " (" <> a ^. argType <> ")"
+        getSegmentArgType _                 = ""
+        pathPart s = s ^. argName . _PathSegment
+
+
+buildDocString :: PythonRequest -> CommonGeneratorOptions -> T.Text
+buildDocString (TypedPythonRequest req) opts = buildDocString' req opts args
+  where args = captureArgsWithTypes $ req ^.. reqUrl.path.traverse
+buildDocString (UnTypedPythonRequest req) opts = buildDocString' req opts args
+  where args = capturesToFormatArgs $ req ^.. reqUrl.path.traverse
+
+buildDocString' :: forall f. Req f -> CommonGeneratorOptions -> [T.Text] -> T.Text
+buildDocString' req opts args = T.toUpper method <> " \"" <> url <> "\n"
                                                   <> includeArgs <> "\n\n"
                                                   <> indent' <> "Returns: " <> "\n"
                                                   <> indent' <> indent' <> returnVal
-  where args = capturesToFormatArgs $ req ^.. reqUrl.path.traverse
-        method = decodeUtf8 $ req ^. reqMethod
-        url = makePyUrl' $ req ^.. reqUrl.path.traverse
+  where method = decodeUtf8 $ req ^. reqMethod
+        url = getSegments $ req ^.. reqUrl.path.traverse
         includeArgs = if null args then "" else argDocs
         argDocs = indent' <> "Args: " <> "\n"
                   <> indent' <> indent' <> T.intercalate ("\n" <> indent' <> indent') args
+
         indent' = indentation opts indent
         returnVal = case returnMode opts of
           DangerMode -> "JSON response from the endpoint"
           RawResponse -> "response (requests.Response) from issuing the request"
+
+getMethod :: PythonRequest -> Text
+getMethod (TypedPythonRequest req) = decodeUtf8 $ req ^. reqMethod
+getMethod (UnTypedPythonRequest req) = decodeUtf8 $ req ^. reqMethod
+
+hasBody :: PythonRequest -> Bool
+hasBody (TypedPythonRequest req) = isJust (req ^. reqBody)
+hasBody (UnTypedPythonRequest req) = isJust (req ^. reqBody)

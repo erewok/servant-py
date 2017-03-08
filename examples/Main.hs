@@ -74,4 +74,4 @@ result = "examples"
 main :: IO ()
 main = do
   writePythonForAPI testApi requests (result </> "api.py")
-  writeTypedPythonForAPI testApi requestsTyped (result </> "api_typed.py")
+  writeTypedPythonForAPI testApi requests (result </> "api_typed.py")

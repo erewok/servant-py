@@ -252,15 +252,15 @@ getHeaderDict :: PythonRequest -> Text
 getHeaderDict (TypedPythonRequest req) = buildHeaderDict $ req ^. reqHeaders
 getHeaderDict (UnTypedPythonRequest req) = buildHeaderDict $ req ^. reqHeaders
 
-retrieveHeaders :: PythonRequest -> [T.Text]
+retrieveHeaders :: PythonRequest -> [Text]
 retrieveHeaders (TypedPythonRequest req) = retrieveHeaderText <$> req ^. reqHeaders
 retrieveHeaders (UnTypedPythonRequest req) = retrieveHeaderText <$> req ^. reqHeaders
 
-retrieveHeaderText :: forall f. HeaderArg f -> T.Text
+retrieveHeaderText :: forall f. HeaderArg f -> Text
 retrieveHeaderText header = header ^. headerArg . argPath
 
 
-functionArguments :: forall f. Req f -> T.Text
+functionArguments :: forall f. Req f -> Text
 functionArguments req =
   mconcat [ T.intercalate ", " args]
   where
@@ -276,12 +276,12 @@ functionArguments req =
                     . view (headerArg . argPath)
                   ) $ req ^. reqHeaders
 
-captures :: PythonRequest -> [T.Text]
+captures :: PythonRequest -> [Text]
 captures (TypedPythonRequest req)   = captures' req
 captures (UnTypedPythonRequest req) = captures' req
 
 
-captures' :: forall f. Req f -> [T.Text]
+captures' :: forall f. Req f -> [Text]
 captures' req = map (view argPath . captureArg)
          . filter isCapture
          $ req ^. reqUrl.path
@@ -297,7 +297,7 @@ makePyUrl' opts req offset = if url' == "\"" then "\"/\"" else url'
                     <> withFormattedCaptures offset pathParts
         pathParts = req ^.. reqUrl.path.traverse
 
-getSegments :: forall f. [Segment f] -> T.Text
+getSegments :: forall f. [Segment f] -> Text
 getSegments segments = if null segments
                        then ""
                        else T.intercalate "/" (map segmentToStr segments) <> "\""
@@ -329,14 +329,14 @@ captureArgsWithTypes segments =  map getSegmentArgType (filter isCapture segment
         pathPart s = s ^. argName . _PathSegment
 
 
-buildDocString :: PythonRequest -> CommonGeneratorOptions -> T.Text
-buildDocString (TypedPythonRequest req) opts = buildDocString' req opts args
+buildDocString :: PythonRequest -> CommonGeneratorOptions -> Text -> Text
+buildDocString (TypedPythonRequest req) opts returnVal = buildDocString' req opts args returnVal
   where args = captureArgsWithTypes $ req ^.. reqUrl.path.traverse
-buildDocString (UnTypedPythonRequest req) opts = buildDocString' req opts args
+buildDocString (UnTypedPythonRequest req) opts returnVal = buildDocString' req opts args returnVal
   where args = capturesToFormatArgs $ req ^.. reqUrl.path.traverse
 
-buildDocString' :: forall f. Req f -> CommonGeneratorOptions -> [T.Text] -> T.Text
-buildDocString' req opts args = T.toUpper method <> " \"" <> url <> "\n"
+buildDocString' :: forall f. Req f -> CommonGeneratorOptions -> [Text] -> Text -> Text
+buildDocString' req opts args returnVal = T.toUpper method <> " \"" <> url <> "\n"
                                                   <> includeArgs <> "\n\n"
                                                   <> indent' <> "Returns: " <> "\n"
                                                   <> indent' <> indent' <> returnVal
@@ -345,11 +345,7 @@ buildDocString' req opts args = T.toUpper method <> " \"" <> url <> "\n"
         includeArgs = if null args then "" else argDocs
         argDocs = indent' <> "Args: " <> "\n"
                   <> indent' <> indent' <> T.intercalate ("\n" <> indent' <> indent') args
-
         indent' = indentation opts indent
-        returnVal = case returnMode opts of
-          DangerMode -> "JSON response from the endpoint"
-          RawResponse -> "response (requests.Response) from issuing the request"
 
 getMethod :: PythonRequest -> Text
 getMethod (TypedPythonRequest req) = decodeUtf8 $ req ^. reqMethod

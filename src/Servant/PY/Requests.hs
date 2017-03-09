@@ -34,7 +34,7 @@ generatePyRequestWith :: CommonGeneratorOptions -> PythonRequest -> Text
 generatePyRequestWith opts req = "\n" <>
     "def " <> functionName opts req <> "(" <> argsStr <> "):\n"
     <> indent' <> docStringMarker
-    <> indent' <> buildDocString req opts <> "\n"
+    <> indent' <> buildDocString req opts returnVal <> "\n"
     <> indent' <> docStringMarker
     <> indent' <> "url = " <> makePyUrl opts req (indent' <> indent') <> "\n\n"
     <> headerDef
@@ -63,6 +63,9 @@ generatePyRequestWith opts req = "\n" <>
         body = [requestBody opts | hasBody req]
         indent' = indentation opts indent
         docStringMarker = "\"\"\"\n"
+        returnVal = case returnMode opts of
+          DangerMode -> "JSON response from the endpoint"
+          RawResponse -> "response (requests.Response) from issuing the request"
 
 
 remainingReqCall :: PyRequestArgs -> Int -> Text

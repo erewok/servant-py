@@ -36,6 +36,7 @@ module Servant.PY.Internal
   , buildHeaderDict
   , functionArguments
   , formatBuilder
+  , remainingReqCall
   -- re-exports
   , (:<|>)(..)
   , (:>)
@@ -354,3 +355,16 @@ getMethod (UnTypedPythonRequest req) = decodeUtf8 $ req ^. reqMethod
 hasBody :: PythonRequest -> Bool
 hasBody (TypedPythonRequest req) = isJust (req ^. reqBody)
 hasBody (UnTypedPythonRequest req) = isJust (req ^. reqBody)
+
+remainingReqCall :: PyRequestArgs -> Int -> Text
+remainingReqCall reqArgs width
+  | null argsAsList = ")"
+  | length argsAsList == 1 = ",\n" <> offset <> head argsAsList <> ")\n"
+  | otherwise = ",\n" <> offset <> T.intercalate (",\n" <> offset) argsAsList <> ")\n"
+  where argsAsList = requestArgsToList reqArgs
+        offset = mconcat $ replicate width " "
+
+requestArgsToList :: PyRequestArgs -> [Text]
+requestArgsToList reqArgs = map snd . filter fst $ zip bools strings
+  where bools = [hasHeaders reqArgs, hasParams reqArgs, hasData reqArgs]
+        strings = ["headers=headers", "params=params", "json=data"]

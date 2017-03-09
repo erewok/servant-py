@@ -67,21 +67,6 @@ generatePyRequestWith opts req = "\n" <>
           DangerMode -> "JSON response from the endpoint"
           RawResponse -> "response (requests.Response) from issuing the request"
 
-
-remainingReqCall :: PyRequestArgs -> Int -> Text
-remainingReqCall reqArgs width
-  | null argsAsList = ")"
-  | length argsAsList == 1 = ",\n" <> offset <> head argsAsList <> ")\n"
-  | otherwise = ",\n" <> offset <> T.intercalate (",\n" <> offset) argsAsList <> ")\n"
-  where argsAsList = requestArgsToList reqArgs
-        offset = mconcat $ replicate width " "
-
-requestArgsToList :: PyRequestArgs -> [Text]
-requestArgsToList reqArgs = map snd . filter fst $ zip bools strings
-  where bools = [hasHeaders reqArgs, hasParams reqArgs, hasData reqArgs]
-        strings = ["headers=headers", "params=params", "json=data"]
-
-
 functionReturn :: ReturnStyle -> (Proxy Indent -> T.Text) -> T.Text
 functionReturn DangerMode pyindenter = indent' <> "resp.raise_for_status()\n"
                                     <> indent' <> "return resp.json()"

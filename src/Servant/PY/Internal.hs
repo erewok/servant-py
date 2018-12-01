@@ -74,7 +74,7 @@ import qualified Data.CharSet                  as Set
 import qualified Data.CharSet.Unicode.Category as Set
 import           Data.Data
 import           Data.Maybe                    (isJust)
-import           Data.Monoid
+import           Data.Monoid()
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
 import           Data.Text.Encoding            (decodeUtf8)
@@ -246,8 +246,8 @@ buildHeaderDict :: [HeaderArg f] -> Text
 buildHeaderDict [] = ""
 buildHeaderDict hs = "{" <> headers <> "}"
   where headers = T.intercalate ", " $ map headerStr hs
-        headerStr header = "\"" <> header ^. headerArg . argPath <> "\": "
-                           <> toPyHeader header
+        headerStr h = "\"" <> h ^. headerArg . argPath <> "\": "
+                           <> toPyHeader h
 
 getHeaderDict :: PythonRequest -> Text
 getHeaderDict (TypedPythonRequest req) = buildHeaderDict $ req ^. reqHeaders
@@ -258,7 +258,7 @@ retrieveHeaders (TypedPythonRequest req) = retrieveHeaderText <$> req ^. reqHead
 retrieveHeaders (UnTypedPythonRequest req) = retrieveHeaderText <$> req ^. reqHeaders
 
 retrieveHeaderText :: forall f. HeaderArg f -> Text
-retrieveHeaderText header = header ^. headerArg . argPath
+retrieveHeaderText h = h ^. headerArg . argPath
 
 
 functionArguments :: forall f. Req f -> Text
@@ -292,10 +292,9 @@ makePyUrl opts (TypedPythonRequest req) offset   = makePyUrl' opts req offset
 makePyUrl opts (UnTypedPythonRequest req) offset = makePyUrl' opts req offset
 
 makePyUrl' :: forall f. CommonGeneratorOptions -> Req f -> Text -> Text
-makePyUrl' opts req offset = if url' == "\"" then "\"/\"" else url'
-  where url' = "\"" <> urlPrefix opts <> "/"
-                    <> getSegments pathParts
-                    <> withFormattedCaptures offset pathParts
+makePyUrl' opts req offset = "\"" <> url <> "\""
+  where url = urlPrefix opts <> "/" <> getSegments pathParts
+                             <> withFormattedCaptures offset pathParts
         pathParts = req ^.. reqUrl.path.traverse
 
 getSegments :: forall f. [Segment f] -> Text
@@ -339,12 +338,12 @@ buildDocString (UnTypedPythonRequest req) opts returnVal = buildDocString' req o
 buildDocString' :: forall f. Req f -> CommonGeneratorOptions -> [Text] -> Text -> Text
 buildDocString' req opts args returnVal = T.toUpper method <> " \"" <> url <> "\n"
                                                   <> includeArgs <> "\n\n"
-                                                  <> indent' <> "Returns: " <> "\n"
+                                                  <> indent' <> "Returns:\n"
                                                   <> indent' <> indent' <> returnVal
   where method = decodeUtf8 $ req ^. reqMethod
         url = getSegments $ req ^.. reqUrl.path.traverse
         includeArgs = if null args then "" else argDocs
-        argDocs = indent' <> "Args: " <> "\n"
+        argDocs = indent' <> "Args:\n"
                   <> indent' <> indent' <> T.intercalate ("\n" <> indent' <> indent') args
         indent' = indentation opts indent
 

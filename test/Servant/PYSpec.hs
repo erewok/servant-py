@@ -9,13 +9,11 @@
 
 module Servant.PYSpec where
 
-import           Data.Either                                (isRight)
 import           Data.Monoid                                ()
-import           Data.Monoid.Compat                         ((<>))
-import           Data.Proxy
+import           Data.Proxy()
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
-import           GHC.TypeLits
+import           GHC.TypeLits()
 import           Prelude                                    ()
 import           Prelude.Compat
 import           Test.Hspec                                 hiding
@@ -25,8 +23,8 @@ import           Test.QuickCheck                            (Arbitrary (..),
                                                              choose, listOf,
                                                              property)
 
-import           Servant.API.ContentTypes
-import           Servant.API.Internal.Test.ComprehensiveAPI
+import           Servant.API.ContentTypes()
+import           Servant.API.Internal.Test.ComprehensiveAPI()
 
 import           Servant.PY.Internal
 

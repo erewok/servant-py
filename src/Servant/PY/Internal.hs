@@ -74,7 +74,7 @@ import qualified Data.CharSet                  as Set
 import qualified Data.CharSet.Unicode.Category as Set
 import           Data.Data
 import           Data.Maybe                    (isJust)
-import           Data.Monoid
+import           Data.Monoid()
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
 import           Data.Text.Encoding            (decodeUtf8)
@@ -246,8 +246,8 @@ buildHeaderDict :: [HeaderArg f] -> Text
 buildHeaderDict [] = ""
 buildHeaderDict hs = "{" <> headers <> "}"
   where headers = T.intercalate ", " $ map headerStr hs
-        headerStr header = "\"" <> header ^. headerArg . argPath <> "\": "
-                           <> toPyHeader header
+        headerStr h = "\"" <> h ^. headerArg . argPath <> "\": "
+                           <> toPyHeader h
 
 getHeaderDict :: PythonRequest -> Text
 getHeaderDict (TypedPythonRequest req) = buildHeaderDict $ req ^. reqHeaders
@@ -258,7 +258,7 @@ retrieveHeaders (TypedPythonRequest req) = retrieveHeaderText <$> req ^. reqHead
 retrieveHeaders (UnTypedPythonRequest req) = retrieveHeaderText <$> req ^. reqHeaders
 
 retrieveHeaderText :: forall f. HeaderArg f -> Text
-retrieveHeaderText header = header ^. headerArg . argPath
+retrieveHeaderText h = h ^. headerArg . argPath
 
 
 functionArguments :: forall f. Req f -> Text

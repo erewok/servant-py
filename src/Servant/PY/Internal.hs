@@ -339,12 +339,12 @@ buildDocString (UnTypedPythonRequest req) opts returnVal = buildDocString' req o
 buildDocString' :: forall f. Req f -> CommonGeneratorOptions -> [Text] -> Text -> Text
 buildDocString' req opts args returnVal = T.toUpper method <> " \"" <> url <> "\n"
                                                   <> includeArgs <> "\n\n"
-                                                  <> indent' <> "Returns: " <> "\n"
+                                                  <> indent' <> "Returns:\n"
                                                   <> indent' <> indent' <> returnVal
   where method = decodeUtf8 $ req ^. reqMethod
         url = getSegments $ req ^.. reqUrl.path.traverse
         includeArgs = if null args then "" else argDocs
-        argDocs = indent' <> "Args: " <> "\n"
+        argDocs = indent' <> "Args:\n"
                   <> indent' <> indent' <> T.intercalate ("\n" <> indent' <> indent') args
         indent' = indentation opts indent
 

@@ -3,3 +3,5 @@
 build/
 examples/*py
 __pycache__
+dist-newstyle
+*ghc.environment*

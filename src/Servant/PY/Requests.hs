@@ -1,6 +1,6 @@
 module Servant.PY.Requests where
 
-import           Data.Monoid()
+import           Data.Monoid         ( (<>) )
 import           Data.Proxy
 import           Data.Text           (Text)
 import qualified Data.Text           as T

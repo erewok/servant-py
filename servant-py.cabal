@@ -5,12 +5,12 @@ description:
   Automatically derive python functions to query servant webservices.
   .
   Supports deriving functions using Python's requests library.
-homepage:            https://github.com/pellagic-puffbomb/servant-py#readme
+homepage:            https://github.com/erewok/servant-py#readme
 license:             BSD3
 license-file:        LICENSE
 author:              Erik Aker
 maintainer:          eraker@gmail.com
-copyright:           2017 Erik Aker
+copyright:           2019 Erik Aker
 category:            Web
 build-type:          Simple
 extra-source-files:  README.md
@@ -89,4 +89,4 @@ test-suite servant-py-test
 
 source-repository head
   type:     git
-  location: https://github.com/pellagic-puffbomb/servant-py
+  location: https://github.com/erewok/servant-py

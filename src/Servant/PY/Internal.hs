@@ -37,36 +37,6 @@ module Servant.PY.Internal
   , functionArguments
   , formatBuilder
   , remainingReqCall
-  -- re-exports
-  , (:<|>)(..)
-  , (:>)
-  , defReq
-  , reqHeaders
-  , HasForeign(..)
-  , HasForeignType(..)
-  , GenerateList(..)
-  , NoTypes
-  , ArgType(..)
-  , HeaderArg(..)
-  , QueryArg(..)
-  , Req(..)
-  , Segment(..)
-  , SegmentType(..)
-  , Url(..)
-  , Path
-  , Arg(..)
-  , FunctionName(..)
-  , PathSegment(..)
-  , concatCase
-  , snakeCase
-  , camelCase
-  , ReqBody
-  , JSON
-  , FormUrlEncoded
-  , Post
-  , Get
-  , Raw
-  , Header
   ) where
 
 import           Control.Lens                  hiding (List)
@@ -74,7 +44,7 @@ import qualified Data.CharSet                  as Set
 import qualified Data.CharSet.Unicode.Category as Set
 import           Data.Data
 import           Data.Maybe                    (isJust)
-import           Data.Monoid()
+import           Data.Monoid                   ( (<>) )
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
 import           Data.Text.Encoding            (decodeUtf8)

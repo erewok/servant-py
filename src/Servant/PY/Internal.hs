@@ -292,10 +292,9 @@ makePyUrl opts (TypedPythonRequest req) offset   = makePyUrl' opts req offset
 makePyUrl opts (UnTypedPythonRequest req) offset = makePyUrl' opts req offset
 
 makePyUrl' :: forall f. CommonGeneratorOptions -> Req f -> Text -> Text
-makePyUrl' opts req offset = if url' == "\"" then "\"/\"" else url'
-  where url' = "\"" <> urlPrefix opts <> "/"
-                    <> getSegments pathParts
-                    <> withFormattedCaptures offset pathParts
+makePyUrl' opts req offset = "\"" <> url <> "\""
+  where url = urlPrefix opts <> "/" <> getSegments pathParts
+                             <> withFormattedCaptures offset pathParts
         pathParts = req ^.. reqUrl.path.traverse
 
 getSegments :: forall f. [Segment f] -> Text

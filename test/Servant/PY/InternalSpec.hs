@@ -27,7 +27,7 @@ import           Test.QuickCheck                            (Arbitrary (..),
                                                              property)
 
 import           Servant.API.ContentTypes
-import           Servant.API.Internal.Test.ComprehensiveAPI
+import           Servant.API.Internal.Test.ComprehensiveAPI()
 import           Servant.Foreign
 
 import           Servant.PY.Internal

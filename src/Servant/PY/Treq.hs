@@ -45,7 +45,9 @@ treq reqs = defPyImports <> mconcat (map treqWithDef reqs)
 defPyImports :: Text
 defPyImports =
   T.unlines
-    [ ""
+    [ "try: from urllib import parse" -- Python 3
+    , "except: import urllib as parse" -- Python 2
+    , ""
     , "from twisted.internet.defer import inlineCallbacks, returnValue"
     ]
 

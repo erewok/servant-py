@@ -18,6 +18,8 @@ module Servant.PY ( -- * Generating python code from an API type
 
   -- Requests library
   , requests
+  -- Treq library
+  , treq
 
   , -- * Function renamers
     concatCase
@@ -39,7 +41,7 @@ import           Servant.Foreign
 import           Servant.PY.Internal
 import           Servant.PY.Python
 import           Servant.PY.Requests
-
+import           Servant.PY.Treq     (treq)
 -- | Generate the data necessary to generate Python code
 --   for all the endpoints of an API, as ':<|>'-separated values
 --   of type 'PyRequest'.

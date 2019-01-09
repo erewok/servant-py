@@ -45,12 +45,9 @@ treq reqs = defPyImports <> mconcat (map treqWithDef reqs)
 defPyImports :: Text
 defPyImports =
   T.unlines
-    [ "from urllib import parse"
-    , "" -- Separate stdlib from 3rd-party imports
+    [ ""
     , "from twisted.internet.defer import inlineCallbacks, returnValue"
-    , "import treq"
     ]
-
 
 treqWithDef :: PythonRequest -> Text
 treqWithDef = generatePyTreqWith defCommonGeneratorOptions

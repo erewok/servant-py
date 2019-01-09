@@ -126,10 +126,10 @@ internalSpec = describe "Internal" $ do
     it "should build a formatted val that ends with parens" $
       property $ \s -> T.isSuffixOf (T.pack s <> "))") $ formatBuilder $ T.pack s
 
-    -- it "should build urls properly with / separator" $ do
-    --   let pyUrl = makePyUrl customOptions req " "
-    --   pyUrl `shouldBe` "\"urlForRequesting:9000/login-with-path-var-and-header/{id}/{Name}/{hungrig}\""
-    --                    <> withFormattedCaptures " " pathParts
+    it "should build urls properly with / separator" $ do
+      let pyUrl = makePyUrl customOptions (UnTypedPythonRequest req) " "
+      pyUrl `shouldBe` "\"urlForRequesting:9000/login-with-path-var-and-header/{id}/{Name}/{hungrig}\""
+                       <> withFormattedCaptures " " pathParts
 
     it "should do segment-to-str as a plain string for Static" $
       segmentToStr (head pathParts) == "login-with-path-var-and-header"

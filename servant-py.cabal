@@ -26,6 +26,7 @@ library
   exposed-modules:     Servant.PY
                      , Servant.PY.Requests
                      , Servant.PY.Internal
+                     , Servant.PY.Treq
                      , Servant.PY.Python
   build-depends:       base >= 4.7 && < 5
                      , aeson
@@ -73,6 +74,7 @@ test-suite servant-py-test
   other-modules:
       Servant.PYSpec
       Servant.PY.InternalSpec
+      Servant.PY.TreqSpec
   build-depends:       base
                      , servant-py
                      , aeson

@@ -305,7 +305,7 @@ buildDocString (UnTypedPythonRequest req) opts returnVal = buildDocString' req o
   where args = capturesToFormatArgs $ req ^.. reqUrl.path.traverse
 
 buildDocString' :: forall f. Req f -> CommonGeneratorOptions -> [Text] -> Text -> Text
-buildDocString' req opts args returnVal = T.toUpper method <> " \"" <> url <> "\n"
+buildDocString' req opts args returnVal = T.toUpper method <> " /" <> url <> "\n"
                                                   <> includeArgs <> "\n\n"
                                                   <> indent' <> "Returns:\n"
                                                   <> indent' <> indent' <> returnVal

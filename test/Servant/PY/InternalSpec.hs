@@ -102,14 +102,14 @@ internalSpec = describe "Internal" $ do
 
   describe "functions that operate on Req objects" $ do
     let captureList = listFromAPI (Proxy :: Proxy NoTypes) (Proxy :: Proxy NoContent) captureApi
-    -- it "should correctly find captures" $ do
-    --   let captured = captures . head $ captureList
-    --   captured `shouldBe` ["id", "Name", "hungrig"]
+    it "should correctly find captures" $ do
+      let captured = captures . head $ map UnTypedPythonRequest captureList
+      captured `shouldBe` ["id", "Name", "hungrig"]
 
-    -- let reqList = listFromAPI (Proxy :: Proxy NoTypes) (Proxy :: Proxy NoContent) testApi
-    -- it "should not incorrectly find captures" $ do
-    --   let captured = captures . head $ reqList
-    --   captured `shouldBe` []
+    let reqList = listFromAPI (Proxy :: Proxy NoTypes) (Proxy :: Proxy NoContent) testApi
+    it "should not incorrectly find captures" $ do
+      let captured = captures . head $ map UnTypedPythonRequest reqList
+      captured `shouldBe` []
 
     let req = head captureList
     let pathParts = req ^.. reqUrl.path.traverse
@@ -135,9 +135,9 @@ internalSpec = describe "Internal" $ do
       segmentToStr (head pathParts) == "login-with-path-var-and-header"
     it "should do segment-to-str in formatting braces for a capture" $
       segmentToStr (last pathParts) == "{hungrig}"
-    -- it "should build a doctstring that looks like a regular Python docstring" $ do
-    --   let docstring = buildDocString req customOptions
-    --   docstring `shouldContain` "POST"
-    --   docstring `shouldContain` makePyUrl' pathParts
-    --   docstring `shouldContain` "Args:"
-    --   docstring `shouldContain` "Returns:"
+    it "should build a doctstring that looks like a regular Python docstring" $ do
+      let docstring = buildDocString (UnTypedPythonRequest req) customOptions ""
+      docstring `shouldContain` "POST"
+      docstring `shouldContain` "/login-with-path-var-and-header/{id}/{Name}/{hungrig}"
+      docstring `shouldContain` "Args:"
+      docstring `shouldContain` "Returns:"

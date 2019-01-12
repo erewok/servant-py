@@ -17,5 +17,5 @@ steps:
   displayName: 'download stack'
 
 - script: |
-    stack --no-terminal --skip-ghc-check test
+    ~/.local/bin/stack --no-terminal --skip-ghc-check test
   displayName: 'Run stack test'

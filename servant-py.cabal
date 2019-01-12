@@ -1,5 +1,5 @@
 name:                servant-py
-version:             0.1.1.0
+version:             0.1.1.1
 synopsis:            Automatically derive python functions to query servant webservices.
 description:
   Automatically derive python functions to query servant webservices.

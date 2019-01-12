@@ -1,5 +1,7 @@
 # servant-py
 
+[![Build Status](https://dev.azure.com/eraker62/servant-py/_apis/build/status/erewok.servant-py?branchName=master)](https://dev.azure.com/eraker62/servant-py/_build/latest?definitionId=1?branchName=master)
+
 This library lets you derive automatically Python functions that let you query each endpoint of a *servant* webservice.
 
 Currently, the only supported method for generating requests is via the `requests` library, which is the recommended way to generate HTTP requests in the Python world (even among Python core devs).

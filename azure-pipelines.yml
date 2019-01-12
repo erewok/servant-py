@@ -1,0 +1,21 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: 'Ubuntu-16.04'
+
+steps:
+- script: |
+    mkdir -p ~/.local/bin
+    export PATH=$HOME/.local/bin:$PATH
+    curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+  displayName: 'download stack'
+
+- script: |
+    ~/.local/bin/stack --no-terminal --skip-ghc-check test
+  displayName: 'Run stack test'
